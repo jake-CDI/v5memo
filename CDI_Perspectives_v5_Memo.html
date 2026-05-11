@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perspectives v5 — Internal Working Memo | CDI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ───────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:      #0F2D52;
+    --teal:      #1A6B6B;
+    --teal-mid:  #2A8F8F;
+    --teal-lt:   #E8F5F5;
+    --blue-lt:   #EAF1F9;
+    --blue-mid:  #C8DCF0;
+    --ink:       #1A1A2E;
+    --ink-mid:   #3D3D5C;
+    --ink-soft:  #6B6B8A;
+    --rule:      #D0D8E8;
+    --bg:        #F7F8FC;
+    --white:     #FFFFFF;
+    --accent:    #C8440A;
+    --accent-lt: #FDF0EB;
+    --warn:      #7A4F00;
+    --warn-lt:   #FFF8EC;
+
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body:    'DM Sans', system-ui, sans-serif;
+    --font-mono:    'DM Mono', monospace;
+
+    --max-w: 860px;
+    --col-gap: 2rem;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Progress bar ───────────────────────────────────── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--teal-mid), var(--accent));
+    z-index: 1000;
+    transition: width 0.1s linear;
+  }
+
+  /* ── Side nav ───────────────────────────────────────── */
+  #sidenav {
+    position: fixed;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 0 0 18px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    display: block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--rule);
+    cursor: pointer;
+    transition: background 0.25s, transform 0.25s;
+    position: relative;
+  }
+
+  .nav-dot:hover,
+  .nav-dot.active { background: var(--teal-mid); transform: scale(1.5); }
+
+  .nav-dot .nav-label {
+    position: absolute;
+    left: 18px; top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    font-family: var(--font-body);
+  }
+
+  .nav-dot:hover .nav-label { opacity: 1; }
+
+  /* ── Cover ──────────────────────────────────────────── */
+  #cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--navy);
+    position: relative;
+    overflow: hidden;
+    padding: 80px 60px 80px 100px;
+  }
+
+  #cover::before {
+    content: '';
+    position: absolute;
+    right: -120px; top: -120px;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(26,107,107,0.35) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  #cover::after {
+    content: '';
+    position: absolute;
+    left: -80px; bottom: -80px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,68,10,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cover-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--teal-mid);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.2s forwards;
+  }
+
+  .cover-title {
+    font-family: var(--font-display);
+    font-size: clamp(42px, 6vw, 72px);
+    line-height: 1.05;
+    color: var(--white);
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.4s forwards;
+  }
+
+  .cover-title em {
+    font-style: italic;
+    color: var(--teal-mid);
+  }
+
+  .cover-subtitle {
+    font-family: var(--font-display);
+    font-size: clamp(20px, 3vw, 28px);
+    font-style: italic;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 48px;
+    line-height: 1.3;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.55s forwards;
+  }
+
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.7s forwards;
+  }
+
+  .cover-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cover-meta-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal-mid);
+    font-weight: 500;
+    font-family: var(--font-mono);
+  }
+
+  .cover-meta-value {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 300;
+  }
+
+  .cover-rule {
+    width: 64px; height: 2px;
+    background: var(--teal-mid);
+    margin: 36px 0;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.62s forwards;
+  }
+
+  .cover-note {
+    max-width: 520px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.45);
+    opacity: 0;
+    animation: fadeUp 0.7s 0.85s forwards;
+    border-left: 2px solid rgba(26,107,107,0.5);
+    padding-left: 16px;
+  }
+
+  /* ── Main layout ────────────────────────────────────── */
+  main {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 80px 24px 120px;
+  }
+
+  /* ── Section wrappers ───────────────────────────────── */
+  .section {
+    margin-bottom: 96px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .section.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── Section header ─────────────────────────────────── */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1.5px solid var(--rule);
+  }
+
+  .section-number {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--teal-mid);
+    font-weight: 500;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 4vw, 36px);
+    line-height: 1.15;
+    color: var(--navy);
+  }
+
+  /* ── Subsection ─────────────────────────────────────── */
+  h3 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--teal);
+    margin: 40px 0 14px;
+    font-style: italic;
+  }
+
+  h4 {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    margin: 32px 0 10px;
+  }
+
+  /* ── Body text ──────────────────────────────────────── */
+  p {
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: var(--ink-mid);
+    margin-bottom: 16px;
+    max-width: 68ch;
+  }
+
+  /* ── Callout ────────────────────────────────────────── */
+  .callout {
+    background: var(--blue-lt);
+    border-left: 3px solid var(--navy);
+    border-radius: 0 6px 6px 0;
+    padding: 18px 22px;
+    margin: 24px 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+
+  .callout.warning {
+    background: var(--warn-lt);
+    border-left-color: var(--warn);
+    color: var(--warn);
+  }
+
+  .callout.accent {
+    background: var(--accent-lt);
+    border-left-color: var(--accent);
+  }
+
+  .callout strong {
+    color: var(--navy);
+    font-weight: 600;
+  }
+
+  /* ── Pull quote ─────────────────────────────────────── */
+  .pull-quote {
+    font-family: var(--font-display);
+    font-size: clamp(18px, 2.5vw, 22px);
+    font-style: italic;
+    line-height: 1.4;
+    color: var(--navy);
+    padding: 28px 0 28px 28px;
+    border-left: 4px solid var(--teal-mid);
+    margin: 36px 0;
+  }
+
+  /* ── Tables ─────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 28px 0;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 12px rgba(15,45,82,0.06);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: var(--white);
+  }
+
+  thead tr {
+    background: var(--navy);
+  }
+
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+    border: none;
+  }
+
+  tbody tr:nth-child(even) { background: var(--bg); }
+  tbody tr:hover { background: var(--blue-lt); transition: background 0.15s; }
+
+  tbody td {
+    padding: 12px 16px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--rule);
+    line-height: 1.6;
+    color: var(--ink-mid);
+  }
+
+  tbody td:first-child {
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* ── Layer cards ────────────────────────────────────── */
+  .layer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 28px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    box-shadow: 0 4px 20px rgba(15,45,82,0.08);
+  }
+
+  .layer-card {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .layer-card:last-child { border-bottom: none; }
+
+  .layer-label {
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .layer-title {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+    line-height: 1.3;
+  }
+
+  .layer-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.05em;
+  }
+
+  .layer-body {
+    padding: 20px 22px;
+    background: var(--white);
+  }
+
+  .layer-body p {
+    font-size: 14px;
+    margin-bottom: 8px;
+    max-width: 100%;
+  }
+
+  .layer-body p:last-child { margin-bottom: 0; }
+
+  /* Layer colors */
+  .layer-0 .layer-label { background: var(--navy); }
+  .layer-1 .layer-label { background: var(--teal); }
+  .layer-2 .layer-label { background: #2E8B6E; }
+  .layer-3 .layer-label { background: #5B7FA6; }
+  .layer-4 .layer-label { background: #7A6FAB; }
+  .layer-shell .layer-label { background: var(--ink-soft); }
+
+  /* ── Phase cycle cards ──────────────────────────────── */
+  .phase-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 28px 0;
+  }
+
+  .phase-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: var(--teal-mid);
+  }
+
+  .phase-card:nth-child(2)::before { background: #2E8B6E; }
+  .phase-card:nth-child(3)::before { background: #5B7FA6; }
+  .phase-card:nth-child(4)::before { background: var(--accent); }
+
+  .phase-number {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .phase-name {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+
+  .phase-desc {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--ink-mid);
+    margin-bottom: 12px;
+  }
+
+  .phase-failure {
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-lt);
+    padding: 8px 10px;
+    border-radius: 4px;
+    line-height: 1.5;
+  }
+
+  .phase-failure strong { color: var(--accent); }
+
+  /* ── Open decisions ─────────────────────────────────── */
+  .decision-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .decision-item {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .decision-icon {
+    width: 24px; height: 24px;
+    background: var(--warn-lt);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .decision-text strong {
+    display: block;
+    font-size: 14px;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+
+  .decision-text span {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  /* ── Tone grid ──────────────────────────────────────── */
+  .tone-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .tone-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .tone-card-header {
+    background: var(--navy);
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--white);
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  .tone-card-body {
+    padding: 12px;
+  }
+
+  .tone-row {
+    margin-bottom: 10px;
+  }
+
+  .tone-row:last-child { margin-bottom: 0; }
+
+  .tone-key {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 2px;
+  }
+
+  .tone-val {
+    font-size: 12px;
+    color: var(--ink-mid);
+    line-height: 1.45;
+  }
+
+  /* ── Approach cards ─────────────────────────────────── */
+  .approach-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .approach-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .approach-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+
+  .badge-launch { background: #E8F5E9; color: #2E7D32; }
+  .badge-recommended { background: var(--teal-lt); color: var(--teal); }
+  .badge-postpilot { background: var(--blue-lt); color: var(--navy); }
+
+  .approach-title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+
+  .approach-desc {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--ink-mid);
+  }
+
+  /* ── UX layer diagram ───────────────────────────────── */
+  .ux-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 28px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    box-shadow: 0 6px 24px rgba(15,45,82,0.1);
+  }
+
+  .ux-layer {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .ux-layer:last-child { border-bottom: none; }
+
+  .ux-layer-label {
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+  }
+
+  .ux-layer-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .ux-layer-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--white);
+    line-height: 1.2;
+  }
+
+  .ux-layer-tag {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    font-style: italic;
+  }
+
+  .ux-l1 .ux-layer-label { background: var(--navy); }
+  .ux-l2 .ux-layer-label { background: var(--teal); }
+  .ux-l3 .ux-layer-label { background: #2E7B6E; }
+
+  .ux-layer-body {
+    padding: 24px 24px;
+    background: var(--white);
+  }
+
+  .ux-layer-body p {
+    font-size: 14px;
+    max-width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .ux-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .ux-bullets li {
+    font-size: 13px;
+    color: var(--ink-soft);
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.55;
+  }
+
+  .ux-bullets li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--teal-mid);
+    font-size: 11px;
+    top: 2px;
+  }
+
+  /* ── Footer ─────────────────────────────────────────── */
+  footer {
+    background: var(--navy);
+    padding: 40px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .footer-left {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+  }
+
+  .footer-right {
+    font-size: 13px;
+    color: rgba(255,255,255,0.3);
+    font-style: italic;
+  }
+
+  /* ── Divider ─────────────────────────────────────────── */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 64px 0;
+  }
+
+  /* ── Animations ─────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Responsive ─────────────────────────────────────── */
+  @media (max-width: 720px) {
+    #cover { padding: 60px 28px; }
+    #sidenav { display: none; }
+    main { padding: 48px 20px 80px; }
+    .phase-grid { grid-template-columns: 1fr; }
+    .approach-grid { grid-template-columns: 1fr; }
+    .tone-grid { grid-template-columns: 1fr 1fr; }
+    .layer-card { grid-template-columns: 1fr; }
+    .layer-label { padding: 14px 18px; }
+    .ux-layer { grid-template-columns: 1fr; }
+    footer { flex-direction: column; padding: 32px 24px; }
+  }
+
+  @media (max-width: 480px) {
+    .tone-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Print ──────────────────────────────────────────── */
+  @media print {
+    #progress-bar, #sidenav { display: none; }
+    .section { opacity: 1; transform: none; }
+    body { background: white; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- Side nav dots -->
+<nav id="sidenav" aria-label="Section navigation">
+  <a class="nav-dot active" data-target="cover" href="#cover"><span class="nav-label">Cover</span></a>
+  <a class="nav-dot" data-target="s0" href="#s0"><span class="nav-label">0 · UX Vision</span></a>
+  <a class="nav-dot" data-target="s1" href="#s1"><span class="nav-label">1 · Invariant Core</span></a>
+  <a class="nav-dot" data-target="s2" href="#s2"><span class="nav-label">2 · Configurability</span></a>
+  <a class="nav-dot" data-target="s3" href="#s3"><span class="nav-label">3 · Audience Tone</span></a>
+  <a class="nav-dot" data-target="s4" href="#s4"><span class="nav-label">4 · Prior Knowledge</span></a>
+  <a class="nav-dot" data-target="s5" href="#s5"><span class="nav-label">5 · Architecture Map</span></a>
+  <a class="nav-dot" data-target="s6" href="#s6"><span class="nav-label">Open Decisions</span></a>
+</nav>
+
+<!-- ── COVER ───────────────────────────────────────────── -->
+<section id="cover">
+  <div class="cover-eyebrow">Constructive Dialogue Institute — Internal Working Memo</div>
+  <h1 class="cover-title">Perspectives <em>v5</em></h1>
+  <div class="cover-subtitle">Architecture, Design Principles,<br>and UX Vision</div>
+  <div class="cover-rule"></div>
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <span class="cover-meta-label">Status</span>
+      <span class="cover-meta-value">Exploratory — not a final specification</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="cover-meta-label">Purpose</span>
+      <span class="cover-meta-value">Map possibilities, surface design principles, name open decisions</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="cover-meta-label">Audience</span>
+      <span class="cover-meta-value">CDI internal team</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="cover-meta-label">Date</span>
+      <span class="cover-meta-value">May 2026</span>
+    </div>
+  </div>
+  <div class="cover-rule" style="margin-top:36px;"></div>
+  <p class="cover-note">This memo captures design thinking from the v5 prototyping session. It presents possibilities and architectural proposals, not decisions. Open questions are flagged explicitly throughout. The goal is a shared map before detailed scoping begins.</p>
+</section>
+
+<!-- ── MAIN ────────────────────────────────────────────── -->
+<main>
+
+  <!-- ── SECTION 0: UX VISION ──────────────────────────── -->
+  <article class="section" id="s0">
+    <div class="section-header">
+      <span class="section-number">§ 0</span>
+      <h2 class="section-title">UX Vision &amp; Infrastructure Position</h2>
+    </div>
+
+    <p>This section is the framing premise for everything that follows. The decisions made here determine what v5 can become.</p>
+
+    <h3>From Pages to Pressure</h3>
+    <p>Perspectives v4 is built on a slide-and-page paradigm. That paradigm has one foundational assumption: the learner is a receiver. Content flows in one direction. Interactions are simulated — clicks, multiple-choice checks, branching menus — but the learner's thinking never changes what happens next in any meaningful way.</p>
+    <p>This is adequate for information transfer. It is structurally wrong for attitude and behavior change, which requires the learner to do something real and encounter genuine consequences.</p>
+
+    <div class="pull-quote">The program is a series of situations the learner moves through — not a series of pages the learner reads.</div>
+
+    <p>This is not a cosmetic change. It is architectural. Every design decision downstream follows from it.</p>
+
+    <h3>Three UX Layers</h3>
+    <p>The v5 UX is proposed as three interlocking layers, each addressing a distinct design problem.</p>
+
+    <div class="ux-stack">
+      <div class="ux-layer ux-l1">
+        <div class="ux-layer-label">
+          <span class="ux-layer-num">Layer 1</span>
+          <span class="ux-layer-name">The Immersive Scenario Engine</span>
+          <span class="ux-layer-tag">The experience</span>
+        </div>
+        <div class="ux-layer-body">
+          <p>The entire program renders as a first-person experience. No visible course chrome — no lesson titles, no progress bars, no "click next to continue." The learner is inside a situation from the first moment. Characters rendered with enough specificity to feel real. Dialogue presented as actual conversation, not narration about conversation.</p>
+          <p>The foundational infrastructure is a <strong>conversation state machine</strong>, not a slide sequencer. A small set of parameters — tension level, trust level, understanding level — shift based on learner choices and determine what happens next. Tractable to build; produces genuine responsiveness without infinite content branches.</p>
+          <ul class="ux-bullets">
+            <li>Learner dropped mid-conversation with no briefing — disorientation is intentional</li>
+            <li>Choices are responses, not answers — accumulated decisions shape the scenario</li>
+            <li>Cannot be built in standard eLearning authoring tools — this requires platform investment</li>
+          </ul>
+        </div>
+      </div>
+      <div class="ux-layer ux-l2">
+        <div class="ux-layer-label">
+          <span class="ux-layer-num">Layer 2</span>
+          <span class="ux-layer-name">The Dual Screen</span>
+          <span class="ux-layer-tag">The awareness</span>
+        </div>
+        <div class="ux-layer-body">
+          <p>Two simultaneous layers always visible: the situation unfolding in the foreground, and an interior layer surfacing what is happening in the learner's own psychology. The interior layer is not instruction — it is observation. <em>"Notice: you just interpreted that as hostile. Was it?"</em></p>
+          <p>This makes metacognitive scaffolding — non-negotiable per the evidence base for any AI-adjacent learning surface — a design feature rather than an interruption. Always present, never blocking.</p>
+          <ul class="ux-bullets">
+            <li>Resolves the core tension between flow and reflection — reflection becomes ambient, not episodic</li>
+            <li>Tone is critical: the interior layer must feel like a companion, not a judge</li>
+          </ul>
+        </div>
+      </div>
+      <div class="ux-layer ux-l3">
+        <div class="ux-layer-label">
+          <span class="ux-layer-num">Layer 3</span>
+          <span class="ux-layer-name">The Living Transcript</span>
+          <span class="ux-layer-tag">The artifact</span>
+        </div>
+        <div class="ux-layer-body">
+          <p>A transcript builds as the learner moves through scenarios — not of the scenario dialogue, but of the learner's own choices and their consequences. The debrief is an analysis of their specific transcript: <em>"In three separate moments, you defaulted to explaining your own position rather than asking a question."</em></p>
+          <p>This is where AI becomes genuinely useful and evidence-defensible. The AI is not a dialogue partner simulating human connection. It is a behavior analyst operating on structured scenario data — tractable, auditable, and honest about what AI does well.</p>
+          <ul class="ux-bullets">
+            <li>Learner output is a behavioral profile, not a certificate</li>
+            <li>Provides partner institutions with genuine outcome data, not just completion rates</li>
+            <li>Distinguishes CDI's AI use from undefensible claims about AI-produced attitudinal change</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <strong>Infrastructure decision:</strong> This program cannot be built in Articulate Storyline, Rise, or equivalent authoring tools. The scenario state machine requires custom engineering. CDI is making a platform investment, not a content investment. That strategic choice needs explicit organizational alignment before v5 scoping begins.
+    </div>
+  </article>
+
+  <hr class="section-divider">
+
+  <!-- ── SECTION 1: INVARIANT CORE ──────────────────────── -->
+  <article class="section" id="s1">
+    <div class="section-header">
+      <span class="section-number">§ 1</span>
+      <h2 class="section-title">The Invariant Core Model</h2>
+    </div>
+
+    <p>The invariant core is what CDI licenses to every partner, in every audience configuration, without exception. It is the product's moat — the thing that makes Perspectives <em>Perspectives</em> regardless of where or how it is deployed.</p>
+
+    <h3>The Four-Phase Cycle</h3>
+    <p>The atomic unit of the v5 program is a four-phase cycle. This cycle is the invariant structure — it does not change across audiences, configurations, or extension layers. Every lesson, at every level of the program, executes this cycle.</p>
+
+    <div class="phase-grid">
+      <div class="phase-card">
+        <div class="phase-number">Phase 1</div>
+        <div class="phase-name">Induction</div>
+        <p class="phase-desc">Learner enters a scenario cold and makes choices without knowing the concept being illustrated. Experience precedes explanation — always. The scenario is the science demonstration.</p>
+        <div class="phase-failure"><strong>Common failure:</strong> Naming the concept before the learner has experienced it. Kills the revelation.</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">Phase 2</div>
+        <div class="phase-name">Revelation</div>
+        <p class="phase-desc">The psychological mechanism is named and explained: "Here is what just happened in your mind." Recognition, not instruction. The learner should feel: <em>"Oh — that is what just happened to me."</em></p>
+        <div class="phase-failure"><strong>Common failure:</strong> Framing revelation as instruction. Produces condescension, not insight.</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">Phase 3</div>
+        <div class="phase-name">Skill</div>
+        <p class="phase-desc">A specific, behaviorally concrete technique is introduced, grounded in the mechanism just revealed. The skill follows <em>from</em> the science — it is not parallel to it. "Because your mind does X, here is the move that counteracts it."</p>
+        <div class="phase-failure"><strong>Common failure:</strong> Introducing skill before mechanism is understood. Produces technique without transfer.</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">Phase 4</div>
+        <div class="phase-name">Practice</div>
+        <p class="phase-desc">Learner re-enters a variant of the scenario and applies the skill under realistic pressure. Transfer, not repetition. The variant should be harder or differently framed than the original.</p>
+        <div class="phase-failure"><strong>Common failure:</strong> Replicating the original scenario exactly. Produces recognition, not transfer.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Scenarios and science are inseparable.</strong> A scenario without the science revelation is a branching story. It may be engaging, but it produces no durable insight — the learner experiences something without understanding why it happened. That is edutainment, not a psychological intervention. The science layer is not a premium feature — it is what makes the base excellent. The scenario layer and the science layer are phases 1 and 2 of a single four-phase cycle and cannot be separated without breaking the program.
+    </div>
+
+  </article>
+
+  <hr class="section-divider">
+
+  <!-- ── SECTION 2: CONFIGURABILITY ─────────────────────── -->
+  <article class="section" id="s2">
+    <div class="section-header">
+      <span class="section-number">§ 2</span>
+      <h2 class="section-title">Levels of Configurability</h2>
+    </div>
+
+    <p>Configurability is one of the most requested features from partners and one of the most significant operational risks for the Ed team. This section maps what varies, at what level, and who controls it — and addresses the capacity implications directly.</p>
+
+    <h3>The Four-Level Architecture</h3>
+
+    <div class="layer-stack">
+      <div class="layer-card layer-0">
+        <div class="layer-label">
+          <span class="layer-title">Invariant Core</span>
+          <span class="layer-time">CDI controls — never varies</span>
+        </div>
+        <div class="layer-body">
+          <p>Nothing varies. The four-phase cycle, concept set, and five principles in their substantive form. CDI never touches this level for any partner configuration.</p>
+        </div>
+      </div>
+      <div class="layer-card layer-1">
+        <div class="layer-label">
+          <span class="layer-title">Audience Shell</span>
+          <span class="layer-time">CDI builds — one per audience tier</span>
+        </div>
+        <div class="layer-body">
+          <p>Tone, voice, prior knowledge mode, principle motivational framing, stakes framing. CDI builds and controls one shell per audience tier. Partners do not configure at this level.</p>
+        </div>
+      </div>
+      <div class="layer-card layer-2">
+        <div class="layer-label">
+          <span class="layer-title">Scenario Library</span>
+          <span class="layer-time">CDI-built + partner-commissionable</span>
+        </div>
+        <div class="layer-body">
+          <p>Situation, characters, social context, domain. CDI builds a default library per audience. Partners may commission additions from CDI. This is the primary partner-facing configurability surface.</p>
+        </div>
+      </div>
+      <div class="layer-card layer-3">
+        <div class="layer-label">
+          <span class="layer-title">Scenario Module</span>
+          <span class="layer-time">Partner-extensible over time</span>
+        </div>
+        <div class="layer-body">
+          <p>Specific program context within an audience tier — MBA vs. public policy vs. medicine within the graduate professional shell. CDI builds initial modules; extensible by partner commission over time.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Key principle:</strong> Configurability does not mean touching the curriculum. It means extending the scenario surface. Partners are not co-authoring the program — they are adding situational contexts to a fixed pedagogical architecture.
+    </div>
+
+    <h3>Partner Configurability: Capacity and Rollout Strategy</h3>
+    <p>Expanding partner configurability creates a more compelling sales proposition, deepens partner relationships, and opens a scenario module revenue stream. However, it also creates real and significant demands on the Ed team's capacity — demands that must be addressed before configurability is broadly offered.</p>
+
+    <h4>The Capacity Problem</h4>
+    <p>Each new scenario module requires original instructional design and writing, quality review against the invariant core principles, audience shell calibration, and scenario testing. This is not lightweight work. If configurability is offered broadly at launch, the Ed team will face a volume of customization requests the current team cannot absorb without degrading quality, missing timelines, or burning out.</p>
+
+    <div class="callout accent">
+      <strong>Recommended: Controlled Launch.</strong> Launch partner configurability as a premium, limited-availability offering in the first phase of v5. Select no more than three to five partners who receive access to scenario module commissioning. This controls volume, allows the Ed team to develop an efficient production workflow, and generates case studies and pricing validation before broader rollout.
+    </div>
+
+  </article>
+
+  <hr class="section-divider">
+
+  <!-- ── SECTION 3: TONE GUIDE ───────────────────────────── -->
+  <article class="section" id="s3">
+    <div class="section-header">
+      <span class="section-number">§ 3</span>
+      <h2 class="section-title">Audience Tone Guide</h2>
+    </div>
+
+    <p>Five audience tiers require five distinct shells. The tone matrix maps the key variables that govern how each shell is written. This is a design system decision — resolve it explicitly before any writing begins, so voice is consistent across modules and writers.</p>
+
+    <h3>Tone Matrix</h3>
+    <div class="tone-grid">
+      <div class="tone-card">
+        <div class="tone-card-header">Undergrad</div>
+        <div class="tone-card-body">
+          <div class="tone-row"><div class="tone-key">Address</div><div class="tone-val">You are learning</div></div>
+          <div class="tone-row"><div class="tone-key">Authority</div><div class="tone-val">CDI instructs</div></div>
+          <div class="tone-row"><div class="tone-key">Examples</div><div class="tone-val">Campus social life, residence halls, classes</div></div>
+          <div class="tone-row"><div class="tone-key">Prior knowledge</div><div class="tone-val">Low</div></div>
+          <div class="tone-row"><div class="tone-key">Stakes</div><div class="tone-val">Identity, belonging, social standing</div></div>
+          <div class="tone-row"><div class="tone-key">PK Mode</div><div class="tone-val">Off by default</div></div>
+        </div>
+      </div>
+      <div class="tone-card">
+        <div class="tone-card-header">Grad Academic</div>
+        <div class="tone-card-body">
+          <div class="tone-row"><div class="tone-key">Address</div><div class="tone-val">You are developing</div></div>
+          <div class="tone-row"><div class="tone-key">Authority</div><div class="tone-val">CDI shares</div></div>
+          <div class="tone-row"><div class="tone-key">Examples</div><div class="tone-val">Seminars, research, peer dynamics</div></div>
+          <div class="tone-row"><div class="tone-key">Prior knowledge</div><div class="tone-val">Medium</div></div>
+          <div class="tone-row"><div class="tone-key">Stakes</div><div class="tone-val">Intellectual credibility, academic community</div></div>
+          <div class="tone-row"><div class="tone-key">PK Mode</div><div class="tone-val">Optional</div></div>
+        </div>
+      </div>
+      <div class="tone-card">
+        <div class="tone-card-header">Grad Professional</div>
+        <div class="tone-card-body">
+          <div class="tone-row"><div class="tone-key">Address</div><div class="tone-val">You are applying</div></div>
+          <div class="tone-row"><div class="tone-key">Authority</div><div class="tone-val">CDI equips</div></div>
+          <div class="tone-row"><div class="tone-key">Examples</div><div class="tone-val">Workplace, clients, teams</div></div>
+          <div class="tone-row"><div class="tone-key">Prior knowledge</div><div class="tone-val">Medium-high</div></div>
+          <div class="tone-row"><div class="tone-key">Stakes</div><div class="tone-val">Professional reputation, career trajectory</div></div>
+          <div class="tone-row"><div class="tone-key">PK Mode</div><div class="tone-val">Default on</div></div>
+        </div>
+      </div>
+      <div class="tone-card">
+        <div class="tone-card-header">Faculty</div>
+        <div class="tone-card-body">
+          <div class="tone-row"><div class="tone-key">Address</div><div class="tone-val">Research suggests</div></div>
+          <div class="tone-row"><div class="tone-key">Authority</div><div class="tone-val">CDI synthesizes</div></div>
+          <div class="tone-row"><div class="tone-key">Examples</div><div class="tone-val">Classroom, colleagues, institutional politics</div></div>
+          <div class="tone-row"><div class="tone-key">Prior knowledge</div><div class="tone-val">High</div></div>
+          <div class="tone-row"><div class="tone-key">Stakes</div><div class="tone-val">Autonomy, respect, academic freedom</div></div>
+          <div class="tone-row"><div class="tone-key">PK Mode</div><div class="tone-val">Default on</div></div>
+        </div>
+      </div>
+      <div class="tone-card">
+        <div class="tone-card-header">Staff</div>
+        <div class="tone-card-body">
+          <div class="tone-row"><div class="tone-key">Address</div><div class="tone-val">In your context</div></div>
+          <div class="tone-row"><div class="tone-key">Authority</div><div class="tone-val">CDI supports</div></div>
+          <div class="tone-row"><div class="tone-key">Examples</div><div class="tone-val">Org dynamics, team friction, policy</div></div>
+          <div class="tone-row"><div class="tone-key">Prior knowledge</div><div class="tone-val">Variable</div></div>
+          <div class="tone-row"><div class="tone-key">Stakes</div><div class="tone-val">Job security, fairness, team cohesion</div></div>
+          <div class="tone-row"><div class="tone-key">PK Mode</div><div class="tone-val">Off by default</div></div>
+        </div>
+      </div>
+    </div>
+
+    <h3>What Not To Do: Negative Cases</h3>
+    <p>Negative cases are often more useful for writers than positive ones.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Audience</th><th>Critical tone failures to avoid</th></tr></thead>
+        <tbody>
+          <tr><td>Undergrad</td><td>Condescension disguised as warmth. Assuming conflict means social drama rather than genuine values disagreement. Oversimplifying the science.</td></tr>
+          <tr><td>Grad Academic</td><td>Treating the content as new when much of it overlaps with what graduate students encounter in their fields. Failing to acknowledge the research traditions the content draws on.</td></tr>
+          <tr><td>Grad Professional</td><td>Anything that reads as soft skills training. Framing skills as interpersonal niceness rather than strategic effectiveness. Underestimating how quickly this audience pattern-matches frameworks.</td></tr>
+          <tr><td>Faculty</td><td>Instructing faculty. Any framing that positions CDI as the expert and the faculty member as the learner. Faculty must be addressed as peers encountering research, not students receiving a curriculum.</td></tr>
+          <tr><td>Staff</td><td>Assuming homogeneity of context — staff audiences are the most variable in role, seniority, and prior exposure. Avoid examples that presuppose a specific organizational type.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The Five Principles and Audience Framing</h3>
+    <p>The five principles of constructive dialogue — let go of winning, ask questions, share stories, respond rather than react, find what is shared — are invariant in substance across every audience and configuration. They will not be altered.</p>
+    <p>However, <strong>motivational framing</strong> is part of the audience shell, not the invariant core. The same principle must land differently depending on who is reading it and what is at stake for them. The example below illustrates how a single principle — one of the most challenging to land across audiences — should be framed for each tier.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Audience</th><th>"Let go of winning" — framing for this audience</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Undergrad</td>
+            <td>Winning an argument often means losing the relationship. Letting go of winning — for now — is how you stay in the conversation long enough to actually be heard.</td>
+          </tr>
+          <tr>
+            <td>Grad Academic</td>
+            <td>The adversarial seminar mode is familiar, but it tends to produce positional entrenchment rather than genuine inquiry. Provisionally suspending the drive to prevail is a precondition for understanding what the other view actually is.</td>
+          </tr>
+          <tr>
+            <td>Grad Professional</td>
+            <td>Winning requires first understanding what you are actually dealing with. Letting go of winning provisionally is a tactical choice, not a concession — it creates the conditions for a more effective response.</td>
+          </tr>
+          <tr>
+            <td>Faculty</td>
+            <td>The research on controversial classroom topics is consistent: modeling provisional openness produces more genuine student engagement than demonstrating positional certainty. Letting go of winning is a professional skill, not a personal virtue.</td>
+          </tr>
+          <tr>
+            <td>Staff</td>
+            <td>In institutional contexts, winning an argument can damage working relationships in ways that outlast the original disagreement. Letting go of winning creates space to find solutions that are actually durable.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The rule: principles live in the invariant core as substance. Their motivational framing — why this principle matters <em>to you, specifically</em> — lives in the audience shell.</p>
+  </article>
+
+  <hr class="section-divider">
+
+  <!-- ── SECTION 4: PRIOR KNOWLEDGE ─────────────────────── -->
+  <article class="section" id="s4">
+    <div class="section-header">
+      <span class="section-number">§ 4</span>
+      <h2 class="section-title">Prior Knowledge Design Principles</h2>
+    </div>
+
+    <p>The program must function across two distinct learner profiles that have fundamentally different relationships to the content. This is not a tone difference — it is a difference in what the program is <em>for</em> at each phase of the cycle.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Profile</th><th>Characteristics and implications</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Low prior knowledge<br><small style="font-weight:400;color:var(--ink-soft)">Typical undergrad, most staff</small></td>
+            <td>Concept introduction is the primary value. Induction works through genuine surprise. Revelation lands as discovery. The skill is genuinely new. Design for engagement, accessibility, and the power of encountering an idea for the first time.</td>
+          </tr>
+          <tr>
+            <td>High prior knowledge<br><small style="font-weight:400;color:var(--ink-soft)">Grad professional, most faculty</small></td>
+            <td>Concept introduction is not the primary value — this learner already knows what confirmation bias is. Induction must demonstrate the gap between knowing a concept and being immune to it. Revelation lands as self-confrontation, not instruction. Design for productive challenge and the knowing-doing gap.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Phase Execution by Profile</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Low prior knowledge</th><th>High prior knowledge</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Induction</td>
+            <td>Concept hidden. Learner encounters the phenomenon without knowing what it is called. Genuine surprise is available.</td>
+            <td>Concept named upfront. <em>"You are about to experience a confirmation bias exercise. Catch yourself doing it."</em> The learner will not succeed. Disconfirmation of self-model is the hook.</td>
+          </tr>
+          <tr>
+            <td>Revelation</td>
+            <td><em>"Here is what just happened in your brain."</em> Lands as discovery.</td>
+            <td><em>"Here is the gap between knowing this framework and being protected by it."</em> Surfaces evidence that metacognitive awareness alone does not produce behavior change.</td>
+          </tr>
+          <tr>
+            <td>Skill</td>
+            <td>Technique introduced as genuinely new. Framed accessibly.</td>
+            <td>Evidence-grounded framing. <em>"Here is what the research shows actually moves behavior — and why it differs from what you would intuitively reach for."</em></td>
+          </tr>
+          <tr>
+            <td>Practice</td>
+            <td>Scaffolded variant scenario. Moderate difficulty.</td>
+            <td>Unscaffolded, higher-stakes variant. Prior knowledge mode removes hints and increases consequence visibility.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Three Approaches for High Prior Knowledge Learners</h3>
+
+    <div class="approach-grid">
+      <div class="approach-card">
+        <span class="approach-badge badge-launch">Always — launch version</span>
+        <div class="approach-title">1. Reposition the Experience</div>
+        <p class="approach-desc">Names the concept upfront and challenges the learner to catch themselves anyway. The revelation is behavioral, not conceptual: the gap between self-model and actual behavior. Low build cost — same architecture, different induction framing. Required for all high prior knowledge deployments.</p>
+      </div>
+      <div class="approach-card">
+        <span class="approach-badge badge-recommended">Recommended — launch version</span>
+        <div class="approach-title">2. Adversarial Debrief</div>
+        <p class="approach-desc">Debrief challenges sophisticated priors with actual research: <em>"Most people with your background assume knowing this framework protects them. Here is the data on whether it does."</em> Positions CDI as a research interlocutor, not a skills instructor. Medium build cost — requires strong evidence writing.</p>
+      </div>
+      <div class="approach-card">
+        <span class="approach-badge badge-postpilot">Post-pilot — requires scale</span>
+        <div class="approach-title">3. Peer Benchmarking</div>
+        <p class="approach-desc">Shows anonymized aggregate response data after each scenario choice: <em>"67% of graduate professional learners in your position chose the same response."</em> High build cost — requires data volume. Design the data architecture at launch so it is buildable once volume exists. Do not retrofit later.</p>
+      </div>
+    </div>
+  </article>
+
+  <hr class="section-divider">
+
+  <!-- ── SECTION 5: ARCHITECTURE MAP ────────────────────── -->
+  <article class="section" id="s5">
+    <div class="section-header">
+      <span class="section-number">§ 5</span>
+      <h2 class="section-title">Program Architecture Map</h2>
+    </div>
+
+    <p>The full vertical structure of the program — from base through continued practice — with content inventory, learning outcomes, and the design principles governing what belongs at each level.</p>
+
+    <div class="callout">
+      <strong>Governing principle for layer assignment:</strong> Content belongs at the base if a learner who only ever does the base should encounter it. Content belongs in the depth layer if it requires the base concept to be internalized first. Content belongs in the breadth layer if it represents adjacent territory. Continued practice belongs to anything requiring repetition over time to produce behavioral consolidation.
+    </div>
+
+    <div class="callout accent">
+      <strong>The base must be excellent, not merely sufficient.</strong> The design risk is putting too much in the base to make it feel complete. Resist this. A premium base is defined by every element being resolved and intentional — not by having everything. The base should do less than v4 and do it better.
+    </div>
+
+    <h3>Base Layer — ~80 minutes</h3>
+    <p><em>Target outcome: foundational understanding of core psychological mechanisms plus genuine first transfer of one skill. A learner who completes only the base should leave changed in some measurable way.</em></p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Content and design notes</th></tr></thead>
+        <tbody>
+          <tr><td>Opening induction (~10 min)</td><td>Learner dropped into a scenario where two reasonable people reach opposite conclusions from identical information. No concept named. No welcome screen. The experience earns investment before the program explains itself.</td></tr>
+          <tr><td>Concept 1: Confirmation bias / elephant-rider (~20 min)</td><td>Full four-phase cycle. Foundational mechanism — everything else is downstream of this. Science depth: introductory. One mechanism, one study, one insight. MFT profile assessment migrates here as a personalization signal rather than a standalone mid-program lesson.</td></tr>
+          <tr><td>Concept 2: Moral foundations / moral empathy gap (~20 min)</td><td>Full four-phase cycle. Attitudinal lever — produces the reframe from "irrational opponent" to "differently weighted values." Lead with the empathy gap, not the theory: the failure to apply MFT in live disagreement is less recognized than the theory itself.</td></tr>
+          <tr><td>Concept 3: Checking for values — one skill (~20 min)</td><td>Full four-phase cycle. Single skill selected for: direct grounding in both preceding concepts; simplicity sufficient to practice meaningfully in 20 minutes; high cross-context transfer across personal, professional, and civic domains.</td></tr>
+          <tr><td>Close: knowing-doing gap + microcommitment (~10 min)</td><td>Not a content summary. Two moves: (1) explicit acknowledgment that understanding alone does not change behavior — this is honest, CDI-appropriate, and bridges naturally to extensions; (2) a single behaviorally specific microcommitment. Vague commitments do not transfer.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Depth Layer — ~45–60 minutes</h3>
+    <p><em>Target outcome: mastery of the core concept set and an expanded skill toolkit. For partners who want the full psychological intervention, not just the introduction.</em></p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Additional concept cycles</td><td>Add additional concept cycles for concepts like intellectual humility, the ideological brain, fundamental attribution error, and others. These require base concepts to be internalized before they land effectively.</td></tr>
+          <tr><td>Expanded skill toolkit</td><td>Looping, AIR the issue, perspective-giving, moral reframing. Moral reframing is CDI's highest-evidence persuasion lever and belongs here — it requires MFT to be genuinely understood first.</td></tr>
+          <tr><td>Richer science layer</td><td>The "show me the research" affordance becomes substantive. Contested findings surfaced. CDI efficacy data accessible. Positions the program explicitly as a psychological intervention.</td></tr>
+          <tr><td>Prior knowledge mode default on</td><td>Unscaffolded practice scenarios. Adversarial debrief mode. Peer benchmarking post-pilot.</td></tr>
+          <tr><td>Full MFT profile</td><td>Complete moral foundations profile as a personalization instrument. Learner receives a substantive report-back on their profile and default dialogue tendencies.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Breadth Layer — ~45–60 minutes</h3>
+    <p><em>Target outcome: transfer to adjacent domains and integration with partner-specific contexts. Primary partner-extensible surface.</em></p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Adjacent skill domains</td><td>Information literacy, critical thinking, good-faith disagreement. CDI-built, consistent with the invariant core methodology.</td></tr>
+          <tr><td>Domain-specific scenario modules</td><td>Civic discourse, professional ethics, academic freedom, organizational conflict. CDI builds initial modules; partner-commissionable over time. See Section 2 for capacity implications.</td></tr>
+          <tr><td>P2P exercise integration</td><td>The existing peer-to-peer exercises from v4 find their natural home here. Structured peer conversations applying breadth-layer skills in real dialogue. Facilitator guides included.</td></tr>
+          <tr><td>Partner-specific framing</td><td>Value proposition variants — career-readiness, student engagement, free expression, academic excellence — configurable at this layer for partner communications and program positioning.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Continued Practice Layer — Ongoing</h3>
+    <p><em>Target outcome: habit formation and behavioral consolidation beyond the module. Lightweight, async, no platform infrastructure dependency.</em></p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Skill-specific micro-practices</td><td>Short exercises (5–10 min) targeting individual skills. Delivered periodically over weeks. Spacing effect: distributed practice outperforms massed practice for behavioral consolidation.</td></tr>
+          <tr><td>Situation-linked reflection prompts</td><td>Prompts tied to real situations the learner named during the program. Low-tech personalization with meaningful impact.</td></tr>
+          <tr><td>P2P meetup facilitation guides</td><td>Lightweight guides enabling learners to convene voluntary peer dialogue practice. CDI as the connective mechanism for ongoing campus dialogue habit. See Eliza and Ryan's concept for "Perspectives Meetups."</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Full Architecture at a Glance</h3>
+    <p style="font-size:14px;color:var(--ink-soft);margin-bottom:24px;">The vertical axis represents depth of engagement — layers stack on top of the invariant core. The horizontal axis represents audience configurability — each column is a distinct shell with its own scenario library.</p>
+
+    <div style="overflow-x:auto;margin:0 0 8px;">
+      <div style="min-width:700px;">
+
+        <!-- Axis labels row -->
+        <div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:4px;">
+          <div></div>
+          <div style="text-align:center;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);padding:4px 0;">Undergrad</div>
+          <div style="text-align:center;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);padding:4px 0;">Grad Academic</div>
+          <div style="text-align:center;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);padding:4px 0;">Grad Professional</div>
+          <div style="text-align:center;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);padding:4px 0;">Faculty</div>
+          <div style="text-align:center;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-soft);padding:4px 0;">Staff</div>
+        </div>
+
+        <!-- Horizontal axis arrow -->
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:4px;margin-bottom:4px;align-items:center;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);text-align:right;padding-right:12px;">← Audience →</div>
+          <div style="height:2px;background:linear-gradient(90deg,var(--teal-mid),var(--navy));border-radius:2px;position:relative;">
+            <div style="position:absolute;right:-1px;top:-4px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid var(--navy);"></div>
+          </div>
+        </div>
+
+        <!-- Vertical axis label -->
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:4px;margin-bottom:8px;align-items:center;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);text-align:right;padding-right:12px;">↓ Depth ↓</div>
+          <div></div>
+        </div>
+
+        <!-- INVARIANT CORE ROW -->
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:4px;margin-bottom:4px;align-items:stretch;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;font-weight:600;color:var(--navy);">Invariant Core</div>
+              <div style="font-size:10px;color:var(--ink-soft);font-style:italic;">Never varies</div>
+            </div>
+          </div>
+          <div style="background:var(--navy);border-radius:6px;padding:12px 20px;text-align:center;font-size:11px;color:rgba(255,255,255,0.85);line-height:1.5;font-weight:500;letter-spacing:0.02em;">
+            Four-phase cycle &nbsp;·&nbsp; Five principles of constructive dialogue &nbsp;·&nbsp; Core psychological concepts &nbsp;·&nbsp; CDI methodology
+          </div>
+        </div>
+
+        <!-- AUDIENCE SHELL ROW -->
+        <div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:4px;align-items:stretch;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;font-weight:600;color:var(--ink-soft);">Audience Shell</div>
+              <div style="font-size:10px;color:var(--ink-soft);font-style:italic;">Tone + framing</div>
+            </div>
+          </div>
+          <div style="background:#F0F0F4;border:1px solid #C8C8D8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--ink-mid);line-height:1.4;">Identity &amp;<br>belonging</div>
+          <div style="background:#F0F0F4;border:1px solid #C8C8D8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--ink-mid);line-height:1.4;">Intellectual<br>credibility</div>
+          <div style="background:#F0F0F4;border:1px solid #C8C8D8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--ink-mid);line-height:1.4;">Professional<br>effectiveness</div>
+          <div style="background:#F0F0F4;border:1px solid #C8C8D8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--ink-mid);line-height:1.4;">Peer &amp;<br>autonomy</div>
+          <div style="background:#F0F0F4;border:1px solid #C8C8D8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--ink-mid);line-height:1.4;">Org context<br>&amp; fairness</div>
+        </div>
+
+        <!-- BASE ROW -->
+        <div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:4px;align-items:stretch;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;font-weight:600;color:var(--teal);">Base</div>
+              <div style="font-size:10px;color:var(--ink-soft);font-style:italic;">~80 min</div>
+            </div>
+          </div>
+          <div style="background:var(--teal-lt);border:1px solid #8ECECE;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--teal);line-height:1.4;font-weight:500;">4-phase cycle<br>Core concepts<br>One skill transfer</div>
+          <div style="background:var(--teal-lt);border:1px solid #8ECECE;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--teal);line-height:1.4;font-weight:500;">4-phase cycle<br>Core concepts<br>One skill transfer</div>
+          <div style="background:var(--teal-lt);border:1px solid #8ECECE;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--teal);line-height:1.4;font-weight:500;">4-phase cycle<br>Core concepts<br>One skill transfer</div>
+          <div style="background:var(--teal-lt);border:1px solid #8ECECE;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--teal);line-height:1.4;font-weight:500;">4-phase cycle<br>Core concepts<br>One skill transfer</div>
+          <div style="background:var(--teal-lt);border:1px solid #8ECECE;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:var(--teal);line-height:1.4;font-weight:500;">4-phase cycle<br>Core concepts<br>One skill transfer</div>
+        </div>
+
+        <!-- DEPTH ROW -->
+        <div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:4px;align-items:stretch;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;font-weight:600;color:#2E8B6E;">Depth</div>
+              <div style="font-size:10px;color:var(--ink-soft);font-style:italic;">~45–60 min</div>
+            </div>
+          </div>
+          <div style="background:#EAF5F0;border:1px solid #A8D8C4;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#1E6B50;line-height:1.4;">Expanded skills<br>Full MFT profile</div>
+          <div style="background:#EAF5F0;border:1px solid #A8D8C4;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#1E6B50;line-height:1.4;">Expanded skills<br>Full MFT profile</div>
+          <div style="background:#EAF5F0;border:1px solid #A8D8C4;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#1E6B50;line-height:1.4;">Expanded skills<br>PK mode on</div>
+          <div style="background:#EAF5F0;border:1px solid #A8D8C4;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#1E6B50;line-height:1.4;">Expanded skills<br>PK mode on</div>
+          <div style="background:#EAF5F0;border:1px solid #A8D8C4;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#1E6B50;line-height:1.4;">Expanded skills<br>Full MFT profile</div>
+        </div>
+
+        <!-- BREADTH ROW -->
+        <div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:4px;align-items:stretch;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;font-weight:600;color:#5B7FA6;">Breadth</div>
+              <div style="font-size:10px;color:var(--ink-soft);font-style:italic;">~45–60 min</div>
+            </div>
+          </div>
+          <div style="background:#EBF2F9;border:1px solid #B8D0E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#3A5F80;line-height:1.4;">Campus civic<br>scenarios</div>
+          <div style="background:#EBF2F9;border:1px solid #B8D0E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#3A5F80;line-height:1.4;">Academic<br>freedom module</div>
+          <div style="background:#EBF2F9;border:1px dashed #B8D0E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#7A9BB8;line-height:1.4;font-style:italic;">Partner-<br>extensible</div>
+          <div style="background:#EBF2F9;border:1px dashed #B8D0E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#7A9BB8;line-height:1.4;font-style:italic;">Partner-<br>extensible</div>
+          <div style="background:#EBF2F9;border:1px dashed #B8D0E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#7A9BB8;line-height:1.4;font-style:italic;">Partner-<br>extensible</div>
+        </div>
+
+        <!-- CONTINUED PRACTICE ROW -->
+        <div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:8px;align-items:stretch;">
+          <div style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;gap:6px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;font-weight:600;color:#7A6FAB;">Continued</div>
+              <div style="font-size:11px;font-weight:600;color:#7A6FAB;">Practice</div>
+              <div style="font-size:10px;color:var(--ink-soft);font-style:italic;">Ongoing</div>
+            </div>
+          </div>
+          <div style="background:#F0EDF8;border:1px solid #C4B8E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#5A4A8A;line-height:1.4;">Micro-practices<br>P2P Meetups</div>
+          <div style="background:#F0EDF8;border:1px solid #C4B8E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#5A4A8A;line-height:1.4;">Micro-practices<br>P2P Meetups</div>
+          <div style="background:#F0EDF8;border:1px solid #C4B8E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#5A4A8A;line-height:1.4;">Micro-practices<br>P2P Meetups</div>
+          <div style="background:#F0EDF8;border:1px solid #C4B8E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#5A4A8A;line-height:1.4;">Micro-practices<br>P2P Meetups</div>
+          <div style="background:#F0EDF8;border:1px solid #C4B8E8;border-radius:6px;padding:10px 10px;text-align:center;font-size:11px;color:#5A4A8A;line-height:1.4;">Micro-practices<br>P2P Meetups</div>
+        </div>
+
+
+
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:20px;padding:14px 18px;background:var(--bg);border:1px solid var(--rule);border-radius:6px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);align-self:center;">Key:</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-mid);">
+        <div style="width:14px;height:14px;border-radius:3px;background:var(--teal-lt);border:1px solid #8ECECE;flex-shrink:0;"></div>
+        Consistent across all audiences
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-mid);">
+        <div style="width:14px;height:14px;border-radius:3px;background:#EBF2F9;border:1px dashed #B8D0E8;flex-shrink:0;"></div>
+        Partner-extensible
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-mid);">
+        <div style="width:14px;height:14px;border-radius:3px;background:#EBF2F9;border:1px solid #B8D0E8;flex-shrink:0;"></div>
+        CDI-built, audience-adapted
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-mid);">
+        <div style="width:14px;height:14px;border-radius:3px;background:var(--navy);flex-shrink:0;"></div>
+        Invariant — never varies
+      </div>
+    </div>
+
+  </article>
+
+  <hr class="section-divider">
+
+  <!-- ── OPEN DECISIONS ──────────────────────────────────── -->
+  <article class="section" id="s6">
+    <div class="section-header">
+      <span class="section-number">✦</span>
+      <h2 class="section-title">Open Decisions</h2>
+    </div>
+
+    <p>The following questions are unresolved and consequential. They should be addressed explicitly before v5 scoping begins — not after.</p>
+
+    <div class="decision-list">
+      <div class="decision-item">
+        <div class="decision-icon">⚑</div>
+        <div class="decision-text">
+          <strong>Can we build the scenario state machine with TI, iFrames, and Iris?</strong>
+          <span>This is the foundational infrastructure question for v5. The answer determines what is architecturally possible and sets the ceiling for every design decision in this memo.</span>
+        </div>
+      </div>
+    </div>
+
+  </article>
+
+</main>
+
+<!-- ── FOOTER ──────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-left">Constructive Dialogue Institute &nbsp;·&nbsp; Perspectives v5 Internal Memo &nbsp;·&nbsp; May 2026</div>
+  <div class="footer-right">Exploratory — not a final specification</div>
+</footer>
+
+<script>
+  // Progress bar
+  const bar = document.getElementById('progress-bar');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (window.scrollY / (h.scrollHeight - h.clientHeight)) * 100;
+    bar.style.width = pct + '%';
+  });
+
+  // Intersection observer for section fade-in
+  const sections = document.querySelectorAll('.section');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08 });
+  sections.forEach(s => observer.observe(s));
+
+  // Sidenav active state
+  const dots = document.querySelectorAll('.nav-dot');
+  const targets = ['cover', 's0', 's1', 's2', 's3', 's4', 's5', 's6'];
+
+  const navObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        dots.forEach(d => d.classList.remove('active'));
+        const dot = document.querySelector(`.nav-dot[data-target="${id}"]`);
+        if (dot) dot.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+
+  targets.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) navObserver.observe(el);
+  });
+</script>
+
+</body>
+</html>
